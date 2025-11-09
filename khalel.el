@@ -431,23 +431,26 @@ and immediately exported to khal."
 (defun khalel-run-vdirsyncer ()
   "Run vdirsyncer process to synchronize local calendar entries."
   (interactive)
-  (let ((buf "*VDIRSYNCER-OUTPUT-BUFFER*")
+  (let* ((buf "*VDIRSYNCER-OUTPUT-BUFFER*")
         (vdirsyncer (or khalel-vdirsyncer-command
-                        (executable-find "vdirsyncer"))))
+                        (executable-find "vdirsyncer")))
+        (cmd
+         (flatten-list
+          `(,vdirsyncer
+            ,(when khalel-vdirsyncer-extra-options
+               (split-string khalel-vdirsyncer-extra-options))
+            "sync"
+            ,(when khalel-vdirsyncer-collections
+               (split-string khalel-vdirsyncer-collections))))))
     (with-output-to-temp-buffer buf
       (khalel--make-temp-window buf 16)
       (with-current-buffer buf
-        (insert "Running " vdirsyncer "..\n\n"))
+        (insert "Running " (mapconcat 'identity cmd " ") "..\n\n"))
+
       (make-process
        :name "khalel-vdirsyncer-process"
        :buffer buf
-       :command (remq nil (flatten-list
-                           `(,vdirsyncer
-                             ,(when khalel-vdirsyncer-extra-options
-                                (split-string khalel-vdirsyncer-extra-options))
-                             "sync"
-                             ,(when khalel-vdirsyncer-collections
-                                (split-string khalel-vdirsyncer-collections)))))
+       :command (remq nil cmd)
        :filter #'khalel--scroll-on-insert-filter
        :sentinel #'khalel--run-after-process))))
 
